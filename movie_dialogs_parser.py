@@ -127,6 +127,7 @@ class MovieDialogParser:
 
         # Building up the Bonus
         self.corpus_dictionary = {}
+        self.rating2ID_dictionary = {}
         movie_conversation_dic = self.movie_conversations
         movie_lines_dic = self.movie_lines
         movie_metadata_dic = self.movie_titles
@@ -173,6 +174,13 @@ class MovieDialogParser:
                     inner_dict['total_movie_lines'] = total_movie_lines
             inner_dict['total_conversations'] = len(conversation_dic)
             self.corpus_dictionary[movie_id] = inner_dict
+            
+            # updating the rating2ID dictionary
+            movie_rating = movie_metadata_dic[movie_id]['IMDB rating']
+            if movie_rating in self.rating2ID_dictionary.keys():
+	            self.rating2ID_dictionary[movie_rating].append(movie_id)
+            else:
+	            self.rating2ID_dictionary[movie_rating] = [movie_id]
 
 
 # for debugging purposes
