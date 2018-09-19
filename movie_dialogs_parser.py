@@ -1,10 +1,13 @@
-from collections import Counter
-import time
-
 """"
 parsing the corpus to iterable, useful & readable (mostly) dictionaries.
 
 """
+
+import time
+
+from collections import Counter
+from typing import Set
+from statistics import mean
 
 
 def line_parser(keys, line):
@@ -26,7 +29,7 @@ def line_parser(keys, line):
             key = keys[index]
 
     # adding the last one for dictionary
-    internal_dictionary[key] = value  # literal_eval(value)  # eval extract list from string
+    internal_dictionary[key] = value
 
     return internal_dictionary
 
@@ -101,6 +104,40 @@ def set_of_words(text):
     return s_o_w
 
 
+def weight_calculator(value_1, value_2):
+    max_value = max(value_1, value_2)
+    min_value = min(value_1, value_2)
+    return 1 - (max_value - min_value) / max_value
+
+
+def object_similarity(obj_1, obj_2):
+    """
+    calculate similarity between two objects
+    :param obj_1: can be line/ conversation/ movie
+    :param obj_2: can be line/ conversation/ movie
+    :return: the similarity value between 0 - 1
+    """
+    w_list = []
+    obj_1_bag_size = sum(obj_1['bag_of_words'].values())
+    obj_2_bag_size = sum(obj_2['bag_of_words'].values())
+    obj_1_set = obj_1['set_of_words']
+    obj_2_set = obj_2['set_of_words']
+    obj_1_diff_2_set = obj_1_set - obj_2_set
+    obj_2_diff_1_set = obj_2_set - obj_1_set
+    w_list.append(weight_calculator(obj_1_bag_size, obj_2_bag_size))
+    w_list.append(weight_calculator(len(obj_1_set), len(obj_2_set)))
+    w_list.append(weight_calculator(len(obj_1_diff_2_set),
+                                    len(obj_2_diff_1_set)))
+    if 'total_lines' in obj_1.keys() and 'total_lines' in obj_2.keys():
+        w_list.append(weight_calculator(obj_1['total_lines'],
+                                        obj_2['total_lines']))
+    if 'total_conversations' in obj_1.keys() and 'total_conversations' in obj_2.keys():
+        w_list.append(weight_calculator(obj_1['total_conversations'],
+                                        obj_2['total_conversations']))
+
+    return mean(w_list)
+
+
 class MovieDialogParser:
     """
     class that contain all the dictionary in one place
@@ -141,19 +178,16 @@ class MovieDialogParser:
             for conversation in movie_conversation_dic.values():
                 if conversation['movieID'] == movie_id:
                     conversation_number += 1
-                    # print(conversation)
-                    # print(conversation_number, "conversation['chronological_order']")
                     lines_dic = {}
                     conversation_bag_of_words = Counter()
-                    conversation_set_of_words = set()
+                    conversation_set_of_words: Set[str] = set()  # added type hint because duck typing inconsistency
                     for lines in eval(conversation['chronological_order']):
-                        # print(lines, movie_lines_dic[lines], movie_lines_dic[lines]['text'])
                         lines_dic[lines] = movie_lines_dic[lines]
                         # bag_of_words returns a Counter object NOT dictionary
                         line_bag_of_words = bag_of_words(movie_lines_dic[lines]['text'])
                         line_set_of_words = set_of_words(movie_lines_dic[lines]['text'])
-                        lines_dic[lines].update({'line_bag_of_words': dict(line_bag_of_words)})
-                        lines_dic[lines].update({'line_set_of_words': line_set_of_words})
+                        lines_dic[lines].update({'bag_of_words': dict(line_bag_of_words)})
+                        lines_dic[lines].update({'set_of_words': line_set_of_words})
                         conversation_bag_of_words += line_bag_of_words
                         conversation_set_of_words.update(line_set_of_words)
 
@@ -161,32 +195,40 @@ class MovieDialogParser:
                     total_movie_lines += len(eval(conversation['chronological_order']))
                     conversation_dic[conversation_number] = lines_dic
                     conversation_dic[conversation_number].update(
-                        {'conversation_bag_of_words': dict(conversation_bag_of_words)})
-
+                        {'bag_of_words': dict(conversation_bag_of_words)})
                     conversation_dic[conversation_number].update(
-                        {'conversation_set_of_words': conversation_set_of_words})
+                        dict(set_of_words=conversation_set_of_words))
                     movie_bag_of_words += conversation_bag_of_words
                     movie_set_of_words.update(conversation_set_of_words)
                     inner_dict['conversation_dic'] = conversation_dic
                     inner_dict['metadata'] = movie_metadata_dic[movie_id]
-                    inner_dict['movie_bag_of_words'] = movie_bag_of_words
-                    inner_dict['movie_set_of_words'] = movie_set_of_words
-                    inner_dict['total_movie_lines'] = total_movie_lines
+                    inner_dict['bag_of_words'] = movie_bag_of_words
+                    inner_dict['set_of_words'] = movie_set_of_words
+                    inner_dict['total_lines'] = total_movie_lines
             inner_dict['total_conversations'] = len(conversation_dic)
             self.corpus_dictionary[movie_id] = inner_dict
             
             # updating the rating2ID dictionary
             movie_rating = movie_metadata_dic[movie_id]['IMDB rating']
             if movie_rating in self.rating2ID_dictionary.keys():
-	            self.rating2ID_dictionary[movie_rating].append(movie_id)
+                self.rating2ID_dictionary[movie_rating].append(movie_id)
             else:
-	            self.rating2ID_dictionary[movie_rating] = [movie_id]
+                self.rating2ID_dictionary[movie_rating] = [movie_id]
 
 
-# for debugging purposes
+# for debugging & example purposes
 if __name__ == "__main__":
     start_time = time.time()
     c = MovieDialogParser()
-    # print(c.corpus_dictionary['m2']['total_movie_lines'])
-    # print(c.corpus_dictionary['m2']['total_conversations'])
+
+    movie_0 = c.corpus_dictionary['m0']
+    movie_1 = c.corpus_dictionary['m1']
+    conversation_0 = movie_0['conversation_dic'][1]
+    conversation_1 = movie_1['conversation_dic'][1]
+    line_0 = conversation_0['L194']
+    line_1 = conversation_1['L2170']
+
+    print('movie similarity score: ', object_similarity(movie_0, movie_1))
+    print('conversation similarity score: ', object_similarity(conversation_0, conversation_1))
+    print('line similarity score: ', object_similarity(line_0, line_1))
     print("--- %s seconds ---" % (time.time() - start_time))
