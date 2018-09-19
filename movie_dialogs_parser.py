@@ -146,15 +146,17 @@ class MovieDialogParser:
         features:
             - movie_metadata features
             - total_conversations
-            - movie_bag\set_of_words
-            - total_movie_lines
+            - bag\set_of_words
+            - total_lines
             - conversation_dic - a dictionary for the conversations
                 - key: generated counter for each conversation starts from 1
                 - lines - dictionary for the lines that constructing the conversation
                     - line_metadata features
-                    - line_bag\set_of_words
+                    - bag\set_of_words
                 - total_lines
-                - conversation_bag\set_of_words
+                - bag\set_of_words
+    Bonus2: added a rating2ID_dictionary for easy
+                IMDB rating (float) -> [movie_id_1, movie_id_2, ...] mapping
     """
     def __init__(self):
         self.movie_lines = movie_lines_to_dict()
