@@ -1,47 +1,26 @@
-from movie_dialogs_parser import MovieDialogParser
-from movie_dialogs_parser import object_similarity
+from movie_dialogs_parser import *
+import time
+
 
 class NaiveBayesClassifier:
-    BagOfWords = {}
-    allRatings = [ '0.0','0.1','0.2','0.3','0.4','0.5','0.6','0.7','0.8','0.9', '1.0','1.1','1.2','1.3','1.4','1.5','1.6','1.7','1.8','1.9',
-                   '2.0', '2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9', '3.0','3.1','3.2','3.3','3.4','3.5','3.6','3.7','3.8','3.9',
-                   '4.0', '4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8', '4.9', '5.0','5.1','5.2','5.3','5.4','5.5','5.6','5.7','5.8','5.9',
-                   '6.0', '6.1', '6.2', '6.3', '6.4', '6.5', '6.6', '6.7', '6.8', '6.9', '7.0','7.1','7.2','7.3','7.4','7.5','7.6','7.7','7.8','7.9',
-                   '8.0', '8.1', '8.2', '8.3', '8.4', '8.5', '8.6', '8.7', '8.8', '8.9', '9.0','9.1','9.2','9.3','9.4','9.5','9.6','9.7','9.8','9.9', '10.0' ]
+    num_movies = 493
 
-## Assumptions: linesDict and conversationDict are dictionries inside dictrioneries
-# #the list of lineIDs should be numbers
-    def __init__(self, linesDict, conversationDict, titlesDict):
-        for movieConvDict in conversationDict.values():
-            list = movieConvDict['list']
-            movieID = movieConvDict['movieID']
-            rating = titlesDict[movieID]['IMDB rating']
-            for i in list:
-                movieLineDict = linesDict[i]
-                text = movieLineDict['text']
-                sepText = text.split(' ')
-                for word in sepText:
-                    tupleKey = tuple(word, rating)
-                    count = self.BagOfWords.get(tupleKey)
-                    if count is None:
-                        self.BagOfWords[tupleKey] = 1
-                    else:
-                        self.BagOfWords[tupleKey] = count + 1
+    def __init__(self):
 
+        titlesDict = movie_titles_metadata_to_dict()
         self.totalExamples = 0
-        histogram = [0] * 100
+        histogram = [0] * 101
         for movieID, movieDict in titlesDict.items():
             self.totalExamples += 1
             movieRating = movieDict['IMDB rating']
-            index = int(float(movieRating) * 10 - 1)  ################## may need to subtract 1 here if the indexes start at 0
+            index = int(float(movieRating) * 10)
             histogram[index] += 1
 
-        for i in range(100):
+        for i in range(101):
             histogram[i] /= self.totalExamples
 
         self.probArr = histogram
         self.totalData = MovieDialogParser()
-
 
     def Classify(self, x):
         maxSum = None
@@ -49,13 +28,99 @@ class NaiveBayesClassifier:
         for rating in self.totalData.rating2ID_dictionary.keys():
             sum = 0
             for ids in self.totalData.rating2ID_dictionary[rating]:
-                totalDialogs = self.totalData.corpus_dictionary[ids]['total_conversations']
-                for conversations in self.totalData.corpus_dictionary[ids]['conversation_dic']:
-                    for dialog in conversations.values():
-                        sum += object_similarity(x, dialog)
-            prob = sum / totalDialogs
+                if int(ids[1:]) <= 493:  # used for 5 fold-Cross-Validation 493 = 80% from 616 total movies
+                    totalDialogs = self.totalData.corpus_dictionary[ids]['total_conversations']
+                    for conver_dic in self.totalData.corpus_dictionary[ids]['conversation_dic'].values():
+                        #   for dialog in conversations.values():
+                        sum += object_similarity(x, conver_dic)
+            prob = self.probArr[int(float(rating) * 10)]*(sum / totalDialogs)
             if maxSum is None or maxSum < prob:
                 maxSum = prob
                 maxRating = rating
 
         return maxRating
+
+    def classify_movie(self, x):
+        maxSum = None
+        maxRating = None
+        for rating in self.totalData.rating2ID_dictionary.keys():
+            sum = 0
+            for ids in self.totalData.rating2ID_dictionary[rating]:
+                if int(ids[1:]) <= NaiveBayesClassifier.num_movies:
+                    # used for 5 fold-Cross-Validation 493 = 80% from 616 total movies
+                    movie_dic = self.totalData.corpus_dictionary[ids]
+                    sum += object_similarity(x, movie_dic)
+            prob = self.probArr[int(float(rating) * 10)]*(sum / NaiveBayesClassifier.num_movies)
+            if maxSum is None or maxSum < prob:
+                maxSum = prob
+                maxRating = rating
+
+        return maxRating
+
+
+def nb_k_fold_cv_test():
+    start_time = time.time()
+    file = open("naive_bayes_dialog_result.txt", 'w')
+    NB = NaiveBayesClassifier()
+    total_score = 0
+    progress = 0
+    total_classified = 0
+    for movie_id, movie_id_dict in NB.totalData.movie_titles.items():
+        if int(movie_id[1:]) > 493:  # used for 5 fold-Cross-Validation 493 = 80% from 616 total movies
+            progress += 1
+            progress_print = progress/123
+            print("progress %.4f" % progress_print)
+            movie_score = 0
+            for dialog_id, dialog in NB.totalData.corpus_dictionary[movie_id]['conversation_dic'].items():
+                total_classified += 1
+                predicted_rating = NB.Classify(dialog)
+                movie_rating = movie_id_dict['IMDB rating']
+                score = weight_calculator(float(movie_rating), float(predicted_rating))
+                write_line = movie_id + ' | ' + str(dialog_id) + ' | ' + movie_rating + ' | ' + \
+                             predicted_rating + ' | ' + str(score) + '\n'
+
+                file.write(write_line)
+                total_score += score
+                movie_score += score
+            # sum up movie score
+            num_conver = NB.totalData.corpus_dictionary[movie_id]['total_conversations']
+            write_line = '\nTotal: ' + movie_id + ' | ' + str(num_conver) + ' | ' + movie_rating + ' | ' + \
+                         str(movie_score/float(num_conver)) + '\n\n'
+
+            file.write(write_line)
+    final_line = "Total entire corpus score is: " + str(total_score/total_classified) + '\n'
+    file.write(final_line)
+    file.close()
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+
+if __name__ == "__main__":
+    start_time = time.time()
+    file = open("naive_bayes_movie_result.txt", 'w')
+    NB = NaiveBayesClassifier()
+    total_score = 0
+    progress = 0
+    total_classified = 0
+    for movie_id, movie_id_dict in NB.totalData.corpus_dictionary.items():
+        if int(movie_id[1:]) > NaiveBayesClassifier.num_movies:
+            # used for 5 fold-Cross-Validation 493 = 80% from 616 total movies
+            progress += 1
+            progress_print = progress/123
+            print("progress %.4f" % progress_print)
+
+            # for dialog_id, dialog in NB.totalData.corpus_dictionary[movie_id]['conversation_dic'].items():
+            total_classified += 1
+
+            predicted_rating = NB.classify_movie(movie_id_dict)
+            movie_rating = movie_id_dict['metadata']['IMDB rating']
+            score = weight_calculator(float(movie_rating), float(predicted_rating))
+            write_line = movie_id + ' | ' + movie_rating + ' | ' + predicted_rating + ' | ' + str(score) + '\n'
+            file.write(write_line)
+
+            total_score += score
+
+    final_line = "Total entire corpus score is: " + str(total_score/total_classified) + '\n'
+    file.write(final_line)
+    file.close()
+    print("--- %s seconds ---" % (time.time() - start_time))
+

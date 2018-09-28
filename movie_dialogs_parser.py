@@ -107,6 +107,8 @@ def set_of_words(text):
 def weight_calculator(value_1, value_2):
     max_value = max(value_1, value_2)
     min_value = min(value_1, value_2)
+    if max_value == 0:
+        return 1
     return 1 - (max_value - min_value) / max_value
 
 
@@ -221,16 +223,18 @@ class MovieDialogParser:
 # for debugging & example purposes
 if __name__ == "__main__":
     start_time = time.time()
-    c = MovieDialogParser()
-
-    movie_0 = c.corpus_dictionary['m0']
-    movie_1 = c.corpus_dictionary['m1']
-    conversation_0 = movie_0['conversation_dic'][1]
-    conversation_1 = movie_1['conversation_dic'][1]
-    line_0 = conversation_0['L194']
-    line_1 = conversation_1['L2170']
-
-    print('movie similarity score: ', object_similarity(movie_0, movie_1))
-    print('conversation similarity score: ', object_similarity(conversation_0, conversation_1))
-    print('line similarity score: ', object_similarity(line_0, line_1))
+    # m = movie_lines_to_dict()
+    # c = MovieDialogParser()
+    #
+    # movie_0 = c.corpus_dictionary['m0']
+    # movie_1 = c.corpus_dictionary['m1']
+    # conversation_0 = movie_0['conversation_dic'][1]
+    # conversation_1 = movie_1['conversation_dic'][1]
+    # line_0 = conversation_0['L194']
+    # line_1 = conversation_1['L2170']
+    #
+    # print('movie similarity score: ', object_similarity(movie_0, movie_1))
+    # print('conversation similarity score: ', object_similarity(conversation_0, conversation_1))
+    # print('line similarity score: ', object_similarity(line_0, line_1))
+    print(weight_calculator('0', '10'))
     print("--- %s seconds ---" % (time.time() - start_time))
