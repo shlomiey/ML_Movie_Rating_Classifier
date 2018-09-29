@@ -1,3 +1,6 @@
+import movie_dialogs_parser
+import time
+
 ############################################################
 # Section 1: Perceptrons
 ############################################################
@@ -27,7 +30,7 @@ class BinaryPerceptron(object):
         for feature in x_keys:
             # correcting each feature in w
             if feature in keys:
-                self.w[feature] += x[feature]
+                self.w[feature] += 0.2*x[feature]
             else:
                 self.w[feature] = x[feature]
 
@@ -37,7 +40,7 @@ class BinaryPerceptron(object):
         for feature in x_keys:
             if feature in keys:
                 # correcting each feature in w
-                self.w[feature] -= x[feature]
+                self.w[feature] -= 0.2*x[feature]
             else:
                 self.w[feature] = -x[feature]
 
@@ -139,7 +142,7 @@ class MulticlassStructuredPerceptron(object):
         keys_w = list(w.keys())
         for key in keys_x:
             if key in keys_w:  # if not in w than it's 0
-                summary += x[key]*w[key]
+                summary += movie_dialogs_parser.weight_calculator(x[key], w[key])
         return summary
 
     def predict(self, x):
@@ -150,142 +153,107 @@ class MulticlassStructuredPerceptron(object):
 ############################################################
 
 
+class MovieClassifier(object):
+    """
+    data: the actual corpus_dictionary itself.
+    aka: movie_dialogs_parser.MovieDialogParser.corpus_dictionary
+    """
+    def __init__(self, iterations):
+        self.data = movie_dialogs_parser.MovieDialogParser().corpus_dictionary
+        dict_data = []
+        for example_id, example in self.data.items():
+            # TODO: comment out for movie classifier - leave untouched for dialog
+            # TODO: change dialog -> example for iterate the learning algorithm
+            movie_id_rating = example['metadata']['IMDB rating']
+            # for movie_dialog in example['conversation_dic'].values():
+            iterate = example
+            feature_dict = {'bag_size': sum(iterate['bag_of_words'].values()),
+                            'set_size': len(iterate['set_of_words'])}
+            if 'total_lines' in iterate.keys():
+                feature_dict['total_lines'] = iterate['total_lines']
+            if 'total_conversations' in iterate.keys():
+                feature_dict['total_conversations'] = iterate['total_conversations']
 
-#
-#
-# class IrisClassifier(object):
-#
-#     def __init__(self, data):
-#         dictData = []
-#         for example in data:
-#             tupleData = example[0]
-#             tempDict = {}
-#             tempDict['x1'] = tupleData[0]
-#             tempDict['x2'] = tupleData[1]
-#             tempDict['x3'] = tupleData[2]
-#             tempDict['x4'] = tupleData[3]
-#             temp = tupleData[2]
-#             if temp < 2:
-#                 tempDict['x5'] = -1
-#             elif 2 <= temp <= 4.5:
-#                 tempDict['x5'] = 0
-#             else:
-#                 tempDict['x5'] = 1
-#
-#             dictData.append((tempDict, example[1]))
-#         self.cls = MulticlassStructuredPerceptron(dictData, 135)
-#
-#     def classify(self, instance):
-#         newDict = {}
-#         for i in range(len(instance)):
-#             newDict['x' + str(i+1)] = instance[i]
-#         x = newDict
-#         return self.cls.predict(x)
-#
-#
-# class DigitClassifier(object):
-#
-#     def __init__(self, data):
-#         dictData = []
-#         for example in data:
-#             tupleData = example[0]
-#             tempDict = {}
-#             for i in range(len(example[0])):
-#                 tempDict['x' + str(i+1)] = tupleData[i]
-#             dictData.append((tempDict, example[1]))
-#         self.cls = MulticlassStructuredPerceptron(dictData, 38)
-#
-#     def classify(self, instance):
-#         newDict = {}
-#         for i in range(len(instance)):
-#             newDict['x' + str(i + 1)] = instance[i]
-#         x = newDict
-#         return self.cls.predict(x)
-#
-#
-# class BiasClassifier(object):
-#
-#     def __init__(self, data):
-#         dictData = []
-#         for example in data:
-#             tupleData = example[0]
-#             tempDict = {}
-#             tempDict['x1'] = tupleData
-#             # additional feature from observation on the data set
-#             if (tupleData >= 1):
-#                 tempDict['x2'] = 1
-#             else:
-#                 tempDict['x2'] = -1
-#             dictData.append((tempDict, example[1]))
-#         self.cls = BinaryPerceptron(dictData, 10)
-#
-#     def classify(self, instance):
-#         newDict = {}
-#         newDict['x1'] = instance
-#         if (instance >= 1):
-#             newDict['x2'] = 1
-#         else:
-#             newDict['x2'] = -1
-#         x = newDict
-#         return self.cls.predict(x)
-#
-#
-# class MysteryClassifier1(object):
-#
-#     def __init__(self, data):
-#         dictData = []
-#         for example in data:
-#             tupleData = example[0]
-#             tempDict = {}
-#             # tempDict['x1'] = tupleData[0]
-#             # tempDict['x2'] = tupleData[1]
-#             # tempDict['x3'] = tupleData[0]*tupleData[1]
-#             # tempDict['x4'] = tupleData[0] + tupleData[1]
-#             # tempDict['x5'] = tupleData[0] - tupleData[1]
-#             if abs(tupleData[0]) > 2:
-#                 tempDict['x2'] = 1
-#             else:
-#                 tempDict['x3'] = 0
-#             dictData.append((tempDict, example[1]))
-#         self.cls = BinaryPerceptron(dictData, 10)
-#
-#     def classify(self, instance):
-#         newDict = {}
-#         newDict['x1'] = instance[0]
-#         newDict['x2'] = instance[1]
-#         newDict['x3'] = instance[0]*instance[1]
-#         newDict['x4'] = instance[0]+instance[1]
-#         newDict['x5'] = instance[0] - instance[1]
-#         x = newDict
-#         return self.cls.predict(x)
-#
-#
-# class MysteryClassifier2(object):
-#
-#     def __init__(self, data):
-#         dictData = []
-#         for example in data:
-#             tupleData = example[0]
-#             tempDict = {}
-#             tempDict['x1'] = tupleData[0]
-#             tempDict['x2'] = tupleData[1]
-#             tempDict['x3'] = tupleData[2]
-#             if tupleData[0]*tupleData[1]*tupleData[2] > 0:
-#                 tempDict['x4'] = 1
-#             else:
-#                 tempDict['x4'] = -1
-#             dictData.append((tempDict, example[1]))
-#         self.cls = BinaryPerceptron(dictData, 10)
-#
-#     def classify(self, instance):
-#         newDict = {}
-#         newDict['x1'] = instance[0]
-#         newDict['x2'] = instance[1]
-#         newDict['x3'] = instance[2]
-#         # additional feature from observation on the data set
-#         if instance[0] * instance[1] * instance[2] > 0:
-#             newDict['x4'] = 1
-#         else:
-#             newDict['x4'] = -1
-#         x = newDict
-#         return self.cls.predict(x)
+            # for consistency tuple of (features, label)
+            dict_data.append((feature_dict, movie_id_rating))
+
+        self.cls = MulticlassStructuredPerceptron(dict_data, iterations)
+
+    def classify(self, instance):
+        feature_dict = {'bag_size': sum(instance['bag_of_words'].values()),
+                        'set_size': len(instance['set_of_words'])}
+        if 'total_lines' in instance.keys():
+            feature_dict['total_lines'] = instance['total_lines']
+        if 'total_conversations' in instance.keys():
+            feature_dict['total_conversations'] = instance['total_conversations']
+        return self.cls.predict(feature_dict)
+
+
+def movie_perceptron_classifier():
+    start_time = time.time()
+    file = open("perceptron_result.txt", 'w')
+    mc = MovieClassifier(35)
+    total_score = 0
+    progress = 0
+    total_classified = 0
+    for movie_id, movie_id_dict in mc.data.items():
+        # used for 5 fold-Cross-Validation 493 = 80% from 616 total movies
+        progress += 1
+        progress_print = progress/617
+        print("progress %.4f" % progress_print)
+
+        # for dialog_id, dialog in NB.totalData.corpus_dictionary[movie_id]['conversation_dic'].items():
+        total_classified += 1
+
+        predicted_rating = mc.classify(movie_id_dict)
+        movie_rating = movie_id_dict['metadata']['IMDB rating']
+        score = movie_dialogs_parser.weight_calculator(float(movie_rating), float(predicted_rating))
+        write_line = movie_id + ' | ' + movie_rating + ' | ' + predicted_rating + ' | ' + str(score) + '\n'
+        file.write(write_line)
+
+        total_score += score
+
+    final_line = "Total entire corpus score is: " + str(total_score/total_classified) + '\n'
+    file.write(final_line)
+    file.close()
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+def movie_dialog_perceptron_classifier():
+    start_time = time.time()
+    file = open("perceptron_dialog_result2.txt", 'w')
+    mc = MovieClassifier(35)
+    total_score = 0
+    progress = 0
+    total_classified = 0
+    for movie_id, movie_id_dict in mc.data.items():
+        # if int(movie_id[1:]) == 493:  # used for 5 fold-Cross-Validation 493 = 80% from 616 total movies
+        progress += 1
+        progress_print = progress/617
+        print("progress %.4f" % progress_print)
+        movie_score = 0
+        for dialog_id, dialog in mc.data[movie_id]['conversation_dic'].items():
+            total_classified += 1
+            predicted_rating = mc.classify(dialog)
+            movie_rating = movie_id_dict['metadata']['IMDB rating']
+            score = movie_dialogs_parser.weight_calculator(float(movie_rating), float(predicted_rating))
+            write_line = movie_id + ' | ' + str(dialog_id) + ' | ' + movie_rating + ' | ' + \
+                         predicted_rating + ' | ' + str(score) + '\n'
+
+            file.write(write_line)
+            total_score += score
+            movie_score += score
+        # sum up movie score
+        num_conver = mc.data[movie_id]['total_conversations']
+        write_line = '\nTotal: ' + movie_id + ' | ' + str(num_conver) + ' | ' + movie_rating + ' | ' + \
+                     str(movie_score/float(num_conver)) + '\n\n'
+
+        file.write(write_line)
+    final_line = "Total entire corpus score is: " + str(total_score/total_classified) + '\n'
+    file.write(final_line)
+    file.close()
+    print('\n\n' + str(total_score/total_classified) + '\n\n')
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+
+if __name__ == "__main__":
+    movie_perceptron_classifier()
