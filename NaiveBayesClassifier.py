@@ -6,7 +6,7 @@ class NaiveBayesClassifier:
     num_movies = 493
 
     def __init__(self):
-
+        # Prior calculation
         titlesDict = movie_titles_metadata_to_dict()
         self.totalExamples = 0
         histogram = [0] * 101
@@ -160,7 +160,7 @@ def nb_k_fold_cv_test():
 
 def nb_hmm_k_fold_cv_test():
     start_time = time.time()
-    file = open("naive_bayes_movie_HMM_result.txt", 'w')
+    file = open("naive_bayes_movie_HMM_genre_result.txt", 'w')
     NB = NaiveBayesClassifier()
     total_score = 0
     progress = 0
@@ -219,4 +219,4 @@ def nb_hmm_test():
 
 
 if __name__ == "__main__":
-    nb_hmm_test()
+    nb_hmm_k_fold_cv_test()

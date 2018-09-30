@@ -105,6 +105,14 @@ def set_of_words(text):
 
 
 def weight_calculator(value_1, value_2):
+    # means we arrived for the new genre feature for NB
+    if type(value_1) == list or type(value_2) == list:
+        ret = 0
+        for value in value_1:
+            if value in value_2:
+                ret += 1
+        return ret
+
     max_value = max(value_1, value_2)
     min_value = min(value_1, value_2)
     if max_value == 0:
@@ -136,7 +144,10 @@ def object_similarity(obj_1, obj_2):
     if 'total_conversations' in obj_1.keys() and 'total_conversations' in obj_2.keys():
         w_list.append(weight_calculator(obj_1['total_conversations'],
                                         obj_2['total_conversations']))
-
+    # Added as observations of genre -> rating relations
+    if 'metadata' in obj_1.keys() and 'metadata' in obj_2.keys():
+        w_list.append(weight_calculator(eval(obj_1['metadata']['genres']),
+                                        eval(obj_2['metadata']['genres'])))
     return mean(w_list)
 
 
